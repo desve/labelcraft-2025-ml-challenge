@@ -143,7 +143,7 @@ class ExperimentManager:
         if row.empty:
             return None
 
-        config_path = row["config_path"].iloc(0) if callable(row["config_path"]) else row["config_path"].iloc[0]
+        config_path = row["config_path"].iloc[0]
         if pd.isna(config_path) or not os.path.exists(config_path):
             return None
 
@@ -155,7 +155,7 @@ class ExperimentManager:
         task: str,
         metric: str = "macro_f1",
         top_n: int = 10,
-        model_name_substr: str | None = None,
+        model_name_substr: Optional[str] = None,
     ) -> pd.DataFrame:
         """
         Возвращает top-N экспериментов по заданной метрике
@@ -173,8 +173,8 @@ class ExperimentManager:
         # фильтруем только те эксперименты, у которых есть путь к конфигу
         df = df.dropna(subset=["config_path"]).copy()
 
-        tasks = []
-        model_names = []
+        tasks: list[str] = []
+        model_names: list[Optional[str]] = []
 
         for _, row in df.iterrows():
             try:
