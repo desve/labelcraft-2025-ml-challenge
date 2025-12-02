@@ -150,3 +150,57 @@ class ExperimentManager:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
 
+    def get_top_experiments(
+        self,
+        task: str,
+        metric: str = "macro_f1",
+        top_n: int = 10,
+        model_name_substr: str | None = None,
+    ) -> pd.DataFrame:
+        """
+        Возвращает top-N экспериментов по заданной метрике
+        (по убыванию), отфильтрованных по task и, опционально,
+        по подстроке в имени модели.
+
+        task            — значение поля 'task' в config.json;
+        metric          — колонка в summary (например, 'macro_f1');
+        top_n           — сколько строк вернуть;
+        model_name_substr — если задано, берём только эксперименты,
+                            у которых в config['model']['name'] есть эта подстрока.
+        """
+        df = self.get_summary()
+
+        # фильтруем только те эксперименты, у которых есть путь к конфигу
+        df = df.dropna(subset=["config_path"]).copy()
+
+        tasks = []
+        model_names = []
+
+        for _, row in df.iterrows():
+            try:
+                with open(row["config_path"], "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+            except Exception:
+                tasks.append(None)
+                model_names.append(None)
+                continue
+
+            tasks.append(cfg.get("task"))
+            model_cfg = cfg.get("model", {})
+            model_names.append(model_cfg.get("name"))
+
+        df["task"] = tasks
+        df["model_name"] = model_names
+
+        # фильтр по задаче
+        df = df[df["task"] == task]
+
+        # фильтр по имени модели (если нужно)
+        if model_name_substr is not None:
+            df = df[df["model_name"].astype(str).str.contains(model_name_substr)]
+
+        # убираем NaN в метрике и сортируем
+        df = df.dropna(subset=[metric])
+        df = df.sort_values(by=metric, ascending=False)
+
+        return df.head(top_n)
