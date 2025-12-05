@@ -1,3 +1,13 @@
+"""
+Публичный Orchestrator для Label Craft 2025.
+
+Содержит базовый сценарий:
+- baseline_only: TF-IDF + LinearSVC.
+
+Расширенные сценарии (RuBERT, rubert-tiny2, ансамбли, авто-анализ истории)
+реализуются в приватном модуле в LabelCraft_2025_private.
+"""
+
 from typing import List, Dict, Any
 
 import pandas as pd
@@ -9,21 +19,9 @@ from sklearn.metrics import f1_score
 
 from src.paths import DATA_PATH, EXPERIMENTS_ROOT
 from src.experiment_manager import ExperimentManager
-from labelcraft_nlp_agent import run_labelcraft_transformer
 
 
 class Orchestrator:
-    """
-    Публичный Orchestrator для Label Craft 2025.
-
-    Содержит базовые сценарии:
-    - baseline_only: TF-IDF + LinearSVC.
-    - nlp_light: один фиксированный запуск RuBERT-tiny (P1).
-
-    Расширенные сценарии (rubert-tiny2, ансамбли, авто-анализ истории)
-    реализуются в приватном модуле в LabelCraft_2025_private.
-    """
-
     def __init__(self, experiments_root: str = EXPERIMENTS_ROOT):
         self.em = ExperimentManager(root_dir=experiments_root)
 
@@ -142,41 +140,18 @@ class Orchestrator:
             "micro_f1": float(micro_f1),
         }
 
-    def run_nlp_light(self) -> Dict[str, Any]:
-        """
-        Запускает RuBERT-tiny (P1: max_length=128, bs=8, 2 epochs, без class weights).
-        """
-        result = run_labelcraft_transformer(
-            data_path=DATA_PATH,
-            text_col="text_clean",
-            target_col="cat_id",
-            model_name="cointegrated/rubert-tiny",
-            sample_size=40_000,
-            max_length=128,
-            batch_size=8,
-            num_epochs=2,
-            learning_rate=2e-5,
-            random_state=42,
-            use_class_weights=False,
-        )
-        return {"experiment_id": result["experiment_id"],
-                "macro_f1": result["macro_f1"],
-                "micro_f1": result["micro_f1"]}
-
     # === Высокоуровневый интерфейс ===
 
     def run_scenario(self, name: str) -> List[Dict[str, Any]]:
         """
         Запускает один из предопределённых сценариев:
         - 'baseline_only'
-        - 'nlp_light'
         """
         results: List[Dict[str, Any]] = []
 
         if name == "baseline_only":
-            results.append({"agent": "baseline_linearsvc", **self.run_baseline_only()})
-        elif name == "nlp_light":
-            results.append({"agent": "nlp_rubert_tiny_p1", **self.run_nlp_light()})
+            res = self.run_baseline_only()
+            results.append({"agent": "baseline_linearsvc", **res})
         else:
             raise ValueError(f"Unknown scenario: {name}")
 
@@ -186,9 +161,8 @@ class Orchestrator:
 
     def summarize_core_experiments(self) -> None:
         """
-        Печатает:
-        - лучшие baseline-эксперименты (по имени baseline_linearsvc);
-        - лучшие NLP-эксперименты (model_name содержит transformer_agent).
+        Печатает лучшие baseline-эксперименты (по имени baseline_linearsvc).
+        NLP-эксперименты можно анализировать в приватном оркестраторе.
         """
         summary = self.em.get_summary()
 
@@ -196,21 +170,8 @@ class Orchestrator:
             summary["name"].astype(str).str.contains("baseline_tfidf_linearsvc", na=False)
         ].dropna(subset=["macro_f1", "micro_f1"])
 
-        df_nlp = self.em.get_top_experiments(
-            task="labelcraft_2025",
-            metric="macro_f1",
-            top_n=10,
-            model_name_substr="transformer_agent",
-        )
-
         print("=== Baseline (LinearSVC) ===")
         if not df_base.empty:
             display(df_base.sort_values(by="macro_f1", ascending=False).head(5))
         else:
             print("No baseline_linearsvc experiments found.")
-
-        print("=== NLP (transformer_agent) ===")
-        if not df_nlp.empty:
-            display(df_nlp[["experiment_id", "model_name", "macro_f1", "micro_f1"]])
-        else:
-            print("No NLP experiments found.")
