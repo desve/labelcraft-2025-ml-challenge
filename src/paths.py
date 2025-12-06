@@ -1,29 +1,63 @@
+# src/paths.py
+"""
+Централизованная конфигурация путей для Label Craft 2025.
+Адаптируйте под своё пространство Google Drive.
+"""
 import os
 
-# 1. Идентификатор проекта
-PROJECT_NAME = "labelcraft-2025-ml-challenge"
+# ================== КОНФИГУРАЦИЯ ПУТЕЙ ==================
 
-# 2. Открытый репозиторий (GitHub / локальный клон в Colab)
-GITHUB_ROOT = "/content/drive/MyDrive/labelcraft-2025-ml-challenge"
+# Корень клонированного репозитория на GitHub
+PUBLIC_PROJECT_ROOT = "/content/drive/MyDrive/labelcraft-2025-ml-challenge"
 
-# 3. Основной рабочий корень в Google Drive (Colab)
-GDRIVE_ROOT = "/content/drive/MyDrive"
+# Корень проекта в Google Drive для Label Craft 2025
+PROJECT_ROOT = "/content/drive/MyDrive/LabelCraft_2025"
 
-# 4. Папка проекта в Google Drive (для общедоступных артефактов)
-PROJECT_ROOT = os.path.join(GDRIVE_ROOT, "LabelCraft_2025")
+# Приватная папка (для агентов, чекпоинтов, промежуточных данных)
+PRIVATE_ROOT = "/content/drive/MyDrive/LabelCraft_2025_private"
 
-# 5. Приватный корень (можно перенести на Яндекс.Диск, достаточно сменить одну строку)
-PRIVATE_ROOT = os.path.join(GDRIVE_ROOT, "LabelCraft_2025_private")
-# Например, для Яндекс.Диска:
-# PRIVATE_ROOT = "/content/drive/MyDrive/YandexDisk/LabelCraft_2025_private"
-
-# 6. Подкаталоги внутри PRIVATE_ROOT
-AGENTS_ROOT = os.path.join(PRIVATE_ROOT, "agents")
-TRANSFORMER_OUTPUTS_ROOT = os.path.join(PRIVATE_ROOT, "labelcraft_transformer_outputs")
-
-# 7. Данные
-DATA_DIR = os.path.join(PROJECT_ROOT, "data")
-DATA_PATH = os.path.join(DATA_DIR, "labeled_train.parquet")
-
-# 8. Эксперименты (общий EXPERIMENTS_ROOT)
+# Папка для экспериментов
 EXPERIMENTS_ROOT = os.path.join(PROJECT_ROOT, "experiments")
+
+# Путь к данным
+DATA_PATH = os.path.join(PROJECT_ROOT, "data", "labeled_train.parquet")
+
+# Папка для чекпоинтов трансформеров (RuBERT и др.)
+TRANSFORMER_OUTPUTS_ROOT = os.path.join(PRIVATE_ROOT, "transformer_checkpoints")
+
+# Папка для приватных агентов
+AGENTS_ROOT = os.path.join(PRIVATE_ROOT, "agents")
+
+# ========================================================
+
+def ensure_paths():
+    """Создаёт все необходимые папки, если они не существуют."""
+    dirs = [
+        PROJECT_ROOT,
+        PRIVATE_ROOT,
+        EXPERIMENTS_ROOT,
+        TRANSFORMER_OUTPUTS_ROOT,
+        AGENTS_ROOT,
+        os.path.join(PROJECT_ROOT, "data"),
+    ]
+    for d in dirs:
+        os.makedirs(d, exist_ok=True)
+    print(f"✓ Все необходимые папки созданы/проверены")
+
+def get_paths_summary():
+    """Возвращает словарь со всеми основными путями."""
+    return {
+        "PUBLIC_PROJECT_ROOT": PUBLIC_PROJECT_ROOT,
+        "PROJECT_ROOT": PROJECT_ROOT,
+        "PRIVATE_ROOT": PRIVATE_ROOT,
+        "EXPERIMENTS_ROOT": EXPERIMENTS_ROOT,
+        "DATA_PATH": DATA_PATH,
+        "TRANSFORMER_OUTPUTS_ROOT": TRANSFORMER_OUTPUTS_ROOT,
+        "AGENTS_ROOT": AGENTS_ROOT,
+    }
+
+if __name__ == "__main__":
+    ensure_paths()
+    print("\n=== Текущие пути ===")
+    for key, val in get_paths_summary().items():
+        print(f"{key}: {val}")
